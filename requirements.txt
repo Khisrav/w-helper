@@ -1,0 +1,5 @@
+# GTK 4 and libadwaita bindings
+PyGObject>=3.42.0
+
+# Additional dependencies
+setuptools>=65.0.0 

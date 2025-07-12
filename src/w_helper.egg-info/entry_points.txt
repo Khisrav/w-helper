@@ -1,0 +1,5 @@
+[console_scripts]
+w-helper = w_helper.cli:main
+
+[gui_scripts]
+w-helper-gui = w_helper.main:main

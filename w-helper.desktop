@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=W-Helper
+GenericName=ASUS ROG Control Center
+Comment=Control center for ASUS ROG Zephyrus G14 laptops
+Exec=w-helper-gui
+Icon=application-x-executable
+Terminal=false
+StartupNotify=true
+Categories=System;HardwareSettings;Settings;
+Keywords=ASUS;ROG;Zephyrus;G14;GPU;CPU;Performance;Battery;
+StartupWMClass=w-helper 

@@ -1,0 +1,257 @@
+Metadata-Version: 2.4
+Name: w-helper
+Version: 0.1.0
+Summary: ASUS ROG Zephyrus G14 Control Center for Linux
+Home-page: https://github.com/your-username/w-helper
+Author: W-Helper Team
+Author-email: 
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: System :: Hardware
+Classifier: Topic :: Desktop Environment :: Gnome
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: PyGObject>=3.42.0
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# W-Helper 🚀
+
+**W-Helper** is a native Linux desktop application designed as an alternative to G-Helper for controlling ASUS ROG Zephyrus G14 (2023) laptops. Built with Python and GTK 4 + libadwaita, it provides a clean, modern interface for managing your laptop's hardware settings.
+
+![W-Helper Screenshot](https://via.placeholder.com/600x400/2e3440/d8dee9?text=W-Helper+GUI)
+
+## ✨ Features
+
+- **🔧 CPU Profile Management**: Switch between Eco, Balanced, and Performance modes
+- **🎮 GPU Mode Control**: Toggle between Integrated, Hybrid, and Discrete GPU modes
+- **🖥️ Display Settings**: Control refresh rate (60Hz, 120Hz, 165Hz)
+- **🔋 Battery Management**: Set charge limits and monitor battery status
+- **📱 Modern UI**: Clean libadwaita interface that integrates perfectly with GNOME
+- **⚡ Command Line Interface**: Full CLI support for automation and scripting
+
+## 🛠️ System Requirements
+
+### Operating System
+- **Fedora 42** (primary target)
+- Other modern Linux distributions with GTK 4 support
+
+### Hardware
+- **ASUS ROG Zephyrus G14 (2023)** laptop
+- Compatible with other ASUS ROG laptops (may require testing)
+
+### Dependencies
+- **System packages**: `asusctl`, `supergfxctl`, `python3-gobject`, `gtk4`, `libadwaita`
+- **Python packages**: `PyGObject>=3.42.0`
+
+## 🚀 Quick Installation (Fedora 42)
+
+### Automated Installation
+```bash
+# Clone the repository
+git clone https://github.com/your-username/w-helper.git
+cd w-helper
+
+# Run the installation script
+chmod +x install.sh
+./install.sh
+```
+
+### Manual Installation
+```bash
+# 1. Install system dependencies
+sudo dnf install -y python3 python3-pip python3-gobject gtk4 libadwaita \
+                    python3-gobject-devel pkg-config gcc glib2-devel \
+                    gtk4-devel libadwaita-devel cairo-devel cairo-gobject-devel
+
+# 2. Install ASUS control utilities
+sudo dnf install -y asusctl supergfxctl
+
+# 3. Enable services
+sudo systemctl enable --now asusd
+sudo systemctl enable --now supergfxd
+
+# 4. Install W-Helper
+pip3 install --user .
+
+# 5. Install desktop entry
+mkdir -p ~/.local/share/applications
+cp w-helper.desktop ~/.local/share/applications/
+update-desktop-database ~/.local/share/applications/
+```
+
+## 📋 Usage
+
+### GUI Application
+```bash
+# Launch from application menu or run:
+w-helper-gui
+```
+
+### Command Line Interface
+```bash
+# View system status
+w-helper status
+
+# CPU Profile Management
+w-helper cpu list              # List available profiles
+w-helper cpu get               # Get current profile
+w-helper cpu set Performance   # Set profile
+
+# GPU Mode Control
+w-helper gpu list              # List available modes
+w-helper gpu get               # Get current mode
+w-helper gpu set Hybrid        # Set mode
+
+# Display Control
+w-helper display list          # List refresh rates
+w-helper display get           # Get current rate
+w-helper display set 120       # Set refresh rate
+
+# Battery Management
+w-helper battery info          # Show battery info
+w-helper battery get-limit     # Get charge limit
+w-helper battery set-limit 80  # Set charge limit
+```
+
+## 🏗️ Architecture
+
+### Project Structure
+```
+w-helper/
+├── src/
+│   └── w_helper/
+│       ├── __init__.py
+│       ├── main.py              # GUI application entry point
+│       ├── cli.py               # Command line interface
+│       ├── window.py            # Main application window
+│       ├── system_controller.py # Hardware control logic
+│       └── widgets/
+│           ├── __init__.py
+│           ├── cpu_profile_widget.py
+│           ├── gpu_mode_widget.py
+│           ├── refresh_rate_widget.py
+│           └── battery_widget.py
+├── requirements.txt
+├── setup.py
+├── w-helper.desktop
+├── install.sh
+└── README.md
+```
+
+### System Integration
+- **CPU Profiles**: Uses `asusctl profile -P [profile]` commands
+- **GPU Modes**: Interfaces with `supergfxctl --set-mode [mode]`
+- **Display**: Controls refresh rate via `xrandr` (X11) or equivalent
+- **Battery**: Manages charge limits through `asusctl batt --set-charge-limit`
+
+## 🔧 Development
+
+### Setting up Development Environment
+```bash
+# Clone and setup
+git clone https://github.com/your-username/w-helper.git
+cd w-helper
+
+# Install in development mode
+pip3 install --user -e .
+
+# Run from source
+python3 -m w_helper.main
+```
+
+### System Integration Testing
+```bash
+# Test individual components
+python3 -c "from w_helper.system_controller import SystemController; c = SystemController(); print(c.get_cpu_profiles())"
+
+# Test CLI commands
+python3 -m w_helper.cli status
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### Permission Errors
+```bash
+# Add user to necessary groups
+sudo usermod -a -G wheel $USER
+
+# Restart or re-login for changes to take effect
+```
+
+#### Missing Dependencies
+```bash
+# Verify ASUS services are running
+systemctl status asusd
+systemctl status supergfxd
+
+# Check if utilities are installed
+which asusctl
+which supergfxctl
+```
+
+#### GTK/GUI Issues
+```bash
+# Verify GTK 4 and libadwaita are installed
+python3 -c "import gi; gi.require_version('Gtk', '4.0'); gi.require_version('Adw', '1'); print('GTK OK')"
+
+# Check desktop integration
+ls ~/.local/share/applications/w-helper.desktop
+```
+
+### Debug Mode
+```bash
+# Run with debug logging
+PYTHONPATH=src python3 -m w_helper.main --debug
+```
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes**
+4. **Test thoroughly** on ASUS ROG hardware
+5. **Submit a pull request**
+
+### Development Guidelines
+- Follow PEP 8 style guidelines
+- Add type hints where appropriate
+- Include docstrings for all functions
+- Test on real hardware when possible
+- Maintain backward compatibility
+
+## 📜 License
+
+This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **asusctl** and **supergfxctl** developers for excellent hardware control utilities
+- **G-Helper** for inspiration and reference
+- **GNOME** and **GTK** teams for the excellent UI framework
+- **ASUS ROG** community for hardware insights and testing
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/your-username/w-helper/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/w-helper/discussions)
+- **Wiki**: [Project Wiki](https://github.com/your-username/w-helper/wiki)
+
+---
+
+**Made with ❤️ for the Linux gaming community** 
