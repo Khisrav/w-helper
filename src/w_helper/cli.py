@@ -100,10 +100,14 @@ def main():
 def handle_cpu_command(controller, args):
     """Handle CPU profile commands"""
     if args.cpu_action == 'list':
-        profiles = controller.get_cpu_profiles()
-        print("Available CPU profiles:")
-        for profile in profiles:
-            print(f"  • {profile}")
+        try:
+            profiles = controller.get_cpu_profiles()
+            print("Available CPU profiles:")
+            for profile in profiles:
+                print(f"  • {profile}")
+        except Exception as e:
+            print(f"❌ Failed to get CPU profiles: {e}")
+            return 1
     
     elif args.cpu_action == 'get':
         profile = controller.get_current_cpu_profile()
@@ -127,10 +131,14 @@ def handle_cpu_command(controller, args):
 def handle_gpu_command(controller, args):
     """Handle GPU mode commands"""
     if args.gpu_action == 'list':
-        modes = controller.get_gpu_modes()
-        print("Available GPU modes:")
-        for mode in modes:
-            print(f"  • {mode}")
+        try:
+            modes = controller.get_gpu_modes()
+            print("Available GPU modes:")
+            for mode in modes:
+                print(f"  • {mode}")
+        except Exception as e:
+            print(f"❌ Failed to get GPU modes: {e}")
+            return 1
     
     elif args.gpu_action == 'get':
         mode = controller.get_current_gpu_mode()

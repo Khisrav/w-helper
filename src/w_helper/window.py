@@ -7,7 +7,6 @@ import logging
 
 from .widgets.cpu_profile_widget import CpuProfileWidget
 from .widgets.gpu_mode_widget import GpuModeWidget
-from .widgets.refresh_rate_widget import RefreshRateWidget
 from .widgets.battery_widget import BatteryWidget
 
 
@@ -84,14 +83,7 @@ class WHelperWindow(Adw.ApplicationWindow):
         gpu_group.add(self.gpu_widget)
         content_box.append(gpu_group)
         
-        # Display Section
-        display_group = Adw.PreferencesGroup()
-        display_group.set_title("Display")
-        display_group.set_description("Control display refresh rate")
-        
-        self.refresh_widget = RefreshRateWidget(self.system_controller)
-        display_group.add(self.refresh_widget)
-        content_box.append(display_group)
+
         
         # Battery Section
         battery_group = Adw.PreferencesGroup()
@@ -148,7 +140,6 @@ class WHelperWindow(Adw.ApplicationWindow):
             # Load current states for all widgets
             self.cpu_widget.load_current_state()
             self.gpu_widget.load_current_state()
-            self.refresh_widget.load_current_state()
             self.battery_widget.load_current_state()
             logging.info("Initial system state loaded successfully")
         except Exception as e:

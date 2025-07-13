@@ -26,15 +26,15 @@ class GpuModeWidget(Adw.ActionRow):
         self.add_suffix(self.mode_dropdown)
         
         # Warning label for restart requirement
-        self.warning_label = Gtk.Label()
-        self.warning_label.set_text("⚠ Restart required after change")
-        self.warning_label.add_css_class("warning")
-        self.warning_label.set_visible(False)
+        # self.warning_label = Gtk.Label()
+        # self.warning_label.set_text("⚠ Restart required after change")
+        # self.warning_label.add_css_class("warning")
+        # self.warning_label.set_visible(False)
         
-        # Add warning to a box
-        warning_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        warning_box.append(self.warning_label)
-        self.add_suffix(warning_box)
+        # # Add warning to a box
+        # warning_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # warning_box.append(self.warning_label)
+        # self.add_suffix(warning_box)
         
         # Load available modes
         self.load_modes()

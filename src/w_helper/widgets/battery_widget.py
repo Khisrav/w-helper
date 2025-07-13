@@ -15,8 +15,8 @@ class BatteryWidget(Adw.PreferencesGroup):
         super().__init__()
         self.system_controller = system_controller
         
-        self.set_title("Battery Control")
-        self.set_description("Control battery charging behavior")
+        # self.set_title("Battery Control")
+        # self.set_description("Control battery charging behavior")
         
         # Battery info row
         self.info_row = Adw.ActionRow()

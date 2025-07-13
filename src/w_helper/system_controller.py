@@ -1,9 +1,16 @@
+import json
 import subprocess
 import logging
 import re
 import os
 from typing import List, Dict, Optional, Tuple
 from gi.repository import GObject
+
+try:
+    from pydbus import SessionBus
+    PYDBUS_AVAILABLE = True
+except ImportError:
+    PYDBUS_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,8 +57,6 @@ class SystemController(GObject.Object):
         try:
             result = subprocess.run(
                 command,
-                # stdout=subprocess.PIPE,
-                # stderr=subprocess.PIPE,
                 capture_output=True,    
                 text=True,
                 check=require_success
@@ -69,21 +74,24 @@ class SystemController(GObject.Object):
     # CPU Profile Methods
     def get_cpu_profiles(self) -> List[str]:
         """Get available CPU profiles"""
-        # success, output = self.run_command(['asusctl', 'profile', '-l'], False)
-        output = subprocess.run(['asusctl', 'profile', '-l'], capture_output=True, text=True, check=True).stdout
-        print(output)
-        # if not success:
-        #     return ['Balanced', 'Performance', 'Quiet']  # Fallback
+        success, output = self.run_command(['asusctl', 'profile', '-l'], False)
+        if not success:
+            raise RuntimeError(f"Failed to get CPU profiles: {output}")
             
         profiles = []
         for line in output.split('\n'):
-            if 'Starting' not in line:
+            line = line.strip()
+            if line and 'Starting' not in line:
                 profiles.append(line)
-        return profiles or []
+        
+        if not profiles:
+            raise RuntimeError(f"No CPU profiles found in output: {repr(output)}")
+            
+        return profiles
         
     def get_current_cpu_profile(self) -> Optional[str]:
         """Get current CPU profile"""
-        success, output = self.run_command(['asusctl', 'profile', '--p'], False)
+        success, output = self.run_command(['asusctl', 'profile', '-p'], False)
         if not success:
             return None
             
@@ -104,19 +112,34 @@ class SystemController(GObject.Object):
             
         return success
         
-    # GPU Mode Methods
     def get_gpu_modes(self) -> List[str]:
         """Get available GPU modes"""
-        success, output = self.run_command(['supergfxctl', '--get-modes'], False)
+        success, output = self.run_command(['supergfxctl', '-s'], False)
         if not success:
-            return ['Integrated', 'Hybrid', 'Discrete']  # Fallback
-            
+            raise RuntimeError(f"Failed to run 'supergfxctl -s': {output}")
+    
+        # Parse the output - it can be in different formats
         modes = []
-        for line in output.split('\n'):
-            line = line.strip()
-            if line and not line.startswith('Available'):
-                modes.append(line)
-        return modes or ['Integrated', 'Hybrid', 'Discrete']
+        
+        # Check if output looks like a list format: [Mode1, Mode2, Mode3]
+        if output.startswith('[') and output.endswith(']'):
+            # Remove brackets and split by comma
+            content = output[1:-1]
+            for item in content.split(','):
+                mode = item.strip()
+                if mode:
+                    modes.append(mode)
+        else:
+            # Parse line by line for text format
+            for line in output.split('\n'):
+                line = line.strip()
+                if line and not line.startswith('Available') and not line.startswith('Current'):
+                    modes.append(line)
+    
+        if not modes:
+            raise RuntimeError(f"No GPU modes found in supergfxctl output: {repr(output)}")
+    
+        return modes
         
     def get_current_gpu_mode(self) -> Optional[str]:
         """Get current GPU mode"""
@@ -127,7 +150,7 @@ class SystemController(GObject.Object):
         
     def set_gpu_mode(self, mode: str) -> bool:
         """Set GPU mode"""
-        success, output = self.run_command(['supergfxctl', '--set-mode', mode], False)
+        success, output = self.run_command(['supergfxctl', '-m', mode], False)
         
         if success:
             self.emit('status-changed', 'gpu', f'GPU mode set to {mode} (restart may be required)', True)
@@ -138,88 +161,80 @@ class SystemController(GObject.Object):
         
     # Display Methods
     def get_available_refresh_rates(self) -> List[str]:
-        """Get available refresh rates"""
-        success, output = self.run_command(['xrandr', '--query'], False)
-        if not success:
-            return ['60', '120', '165']  # Fallback
+        """Get available refresh rates using GNOME DisplayConfig D-Bus interface"""
+        if not PYDBUS_AVAILABLE:
+            raise RuntimeError("pydbus is required for display configuration")
             
-        rates = set()
-        for line in output.split('\n'):
-            if '*' in line or '+' in line:  # Current or preferred mode
-                # Extract refresh rates from mode line
-                matches = re.findall(r'(\d+\.\d+)', line)
-                for match in matches:
-                    rate = str(int(float(match)))
-                    rates.add(rate)
+        try:
+            bus = SessionBus()
+            display_config = bus.get("org.gnome.Mutter.DisplayConfig")
+            
+            # Get current display config
+            serial, monitors, logical_monitors, properties = display_config.GetCurrentState()
+            
+            rates = set()
+            for monitor in monitors:
+                for mode in monitor[1]:  # modes are in the second element
+                    refresh = mode[3]  # refresh rate is at index 3
+                    rates.add(str(int(refresh)))
                     
-        return sorted(list(rates)) or ['60', '120', '165']
+            if not rates:
+                raise RuntimeError("No refresh rates found")
+                
+            return sorted(list(rates))
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get refresh rates via D-Bus: {e}")
         
     def get_current_refresh_rate(self) -> Optional[str]:
-        """Get current refresh rate"""
-        success, output = self.run_command(['xrandr', '--query'], False)
-        if not success:
+        """Get current refresh rate using GNOME DisplayConfig D-Bus interface"""
+        if not PYDBUS_AVAILABLE:
             return None
             
-        for line in output.split('\n'):
-            if '*' in line:  # Current mode
-                match = re.search(r'(\d+\.\d+)\*', line)
-                if match:
-                    return str(int(float(match.group(1))))
-        return None
+        try:
+            bus = SessionBus()
+            display_config = bus.get("org.gnome.Mutter.DisplayConfig")
+            
+            # Get current display config
+            serial, monitors, logical_monitors, properties = display_config.GetCurrentState()
+            
+            # Find the current mode for the primary monitor
+            for monitor in monitors:
+                for mode in monitor[1]:  # modes
+                    if len(mode) > 6 and isinstance(mode[6], dict) and mode[6].get('is-current', False):
+                        refresh = mode[3]  # refresh rate is at index 3
+                        return str(int(refresh))
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get current refresh rate: {e}")
+            return None
         
     def set_refresh_rate(self, rate: str) -> bool:
-        """Set refresh rate"""
-        # Get primary display
-        success, output = self.run_command(['xrandr', '--query'], False)
-        if not success:
+        """Set refresh rate using GNOME DisplayConfig D-Bus interface"""
+        if not PYDBUS_AVAILABLE:
+            self.emit('status-changed', 'display', 'pydbus is required for display configuration', False)
             return False
             
-        primary_display = None
-        for line in output.split('\n'):
-            if ' connected primary' in line:
-                primary_display = line.split()[0]
-                break
-                
-        if not primary_display:
-            # Try to find any connected display
-            for line in output.split('\n'):
-                if ' connected' in line:
-                    primary_display = line.split()[0]
-                    break
-                    
-        if not primary_display:
-            self.emit('status-changed', 'display', 'No connected display found', False)
-            return False
-            
-        # Set refresh rate
-        success, output = self.run_command([
-            'xrandr', '--output', primary_display, '--rate', rate
-        ], False)
-        
-        if success:
-            self.emit('status-changed', 'display', f'Refresh rate set to {rate}Hz', True)
-        else:
-            self.emit('status-changed', 'display', f'Failed to set refresh rate: {output}', False)
-            
-        return success
+        self.emit('status-changed', 'display', 
+                 f'Refresh rate setting to {rate}Hz is not yet implemented. '
+                 f'Please use your system settings.', False)
+        return False
         
     # Battery Methods
     def get_battery_charge_limit(self) -> Optional[int]:
         """Get current battery charge limit"""
-        success, output = self.run_command(['asusctl', 'batt', '--get-charge-limit'], False)
-        if not success:
+        try:
+            with open('/sys/class/power_supply/BAT0/charge_control_end_threshold', 'r') as f:
+                return int(f.read().strip())
+        except Exception as e:
+            logger.error(f"Failed to read charge limit: {e}")
             return None
-            
-        match = re.search(r'(\d+)', output)
-        if match:
-            return int(match.group(1))
-        return None
         
     def set_battery_charge_limit(self, limit: int) -> bool:
         """Set battery charge limit"""
-        success, output = self.run_command([
-            'asusctl', 'batt', '--set-charge-limit', str(limit)
-        ], False)
+        success, output = self.run_command(['asusctl', '-c', str(limit)], False)
         
         if success:
             self.emit('status-changed', 'battery', f'Battery charge limit set to {limit}%', True)
